@@ -9,6 +9,102 @@ export function aggregatedEventsToHeightArray(aggregatedEvents) {
     return heightArray;
 }
 
+
+export function updatePlane10(geo, aggregatedEvents, curve_points = 32) {
+  const MAX_TIMELINES = 16;
+
+  const posAttr = geo.attributes.position;
+  const vertexCount = posAttr.count;
+
+  // DEAL WITH FAILURE CASE /////////////////////////////////
+  ///////////////////////////////////////////////////////////
+  if (!aggregatedEvents || aggregatedEvents.length === 0) {
+    geo.userData.numTimelines = 0;
+    geo.userData.maxHeight = 0;
+    geo.userData.minHeight = 0;
+
+    const zeroBuf = new Float32Array(vertexCount);
+    for (let t = 0; t < MAX_TIMELINES; t++) {
+      geo.setAttribute(
+        `timeline${t}`,
+        new THREE.Float32BufferAttribute(zeroBuf, 1),
+      );
+    }
+  
+    return geo;
+  }
+
+  let numTimelines = aggregatedEvents[0].length;
+  if (aggregatedEvents.length !== vertexCount) {
+    console.warn('aggregatedEvents length must equal vertex count');
+  }
+
+  if (numTimelines > MAX_TIMELINES) {
+    console.warn(
+      `numTimelines (${numTimelines}) > MAX_TIMELINES (${MAX_TIMELINES}), truncating`,
+    );
+    numTimelines = MAX_TIMELINES;
+  }
+
+  // ---- smooth heights (your spline "blur") ----
+  const heightArray = aggregatedEventsToHeightArray(aggregatedEvents);
+  const positions = posAttr.array;
+  const heights = new Float32Array(vertexCount);
+  let maxHeight = -Infinity;
+  let minHeight = Infinity;
+
+  for (let i = 0; i < vertexCount; i++) {
+    const h = heightArray[i] ?? 0;
+    heights[i] = h;
+
+    if (h > maxHeight) maxHeight = h;
+    if (h < minHeight) minHeight = h;
+
+    // deform geometry: y = height
+    const idx = i * 3;
+    positions[idx + 1] = h;
+  }
+
+  posAttr.needsUpdate = true;
+  geo.computeVertexNormals();
+
+  // ---- per‑timeline attributes (for banding shader) ----
+  for (let t = 0; t < MAX_TIMELINES; t++) {
+    const buf = new Float32Array(vertexCount);
+
+    if (t < numTimelines) {
+      for (let v = 0; v < vertexCount; v++) {
+        const row = aggregatedEvents[v] || [];
+        buf[v] = row[t] ?? 0;
+      }
+    } else {
+      buf.fill(0);
+    }
+
+    geo.setAttribute(
+      `timeline${t}`,
+      new THREE.Float32BufferAttribute(buf, 1),
+    );
+  }
+
+  // heightBuffer still used by shader for vHeight / banding
+  geo.setAttribute(
+    'heightBuffer',
+    new THREE.Float32BufferAttribute(heights, 1),
+  );
+
+  geo.userData.numTimelines = numTimelines;
+  geo.userData.maxHeight = maxHeight;
+  geo.userData.minHeight = minHeight;
+  geo.userData.maxTimelines = MAX_TIMELINES;
+
+  return geo;
+}
+
+
+
+
+
 export function updatePlane9(geo, aggregatedEvents, curve_points = 64) {
   const MAX_TIMELINES = 16;
 
