@@ -1,7 +1,7 @@
 import {
   attribute, varying, Fn,
   float, vec3, color, clamp, max, step, mix,
-  positionWorld, uniform, positionLocal
+  positionWorld, uniform, positionLocal, div
 } from 'three/tsl';
 
 import { MeshStandardNodeMaterial, DoubleSide } from 'three/webgpu';
@@ -69,8 +69,73 @@ const COLLECTION_COLORS_GREEN = [
   '#d6ead9',  // Mint whisper
 ];
 
+const COLLECTION_COLORS_T1 = [
+  '#2e3d52',  // Deep Tiepolo shadow blue
+  '#5a7a9e',  // Mid sky blue
+  '#8faec8',  // Airy cerulean
+  '#b8cdd9',  // Pale cloud blue
+  '#d9e4e8',  // Gossamer sky
+  '#ece8e0',  // Cloud white-cream
+  '#f7f4ef',  // Luminous near-white
+];
 
-const bandUniforms = COLLECTION_COLORS_WG.map(hex => uniform(color(hex)));
+
+const COLLECTION_COLORS_T2 = [
+  '#3d2a1a',  // Deep umber shadow
+  '#7a4f2a',  // Warm brown
+  '#b87d3e',  // Ochre gold
+  '#d4a45a',  // Naples yellow
+  '#e8c98a',  // Pale gold
+  '#f0ddb0',  // Warm cream
+  '#faf3e0',  // Luminous ivory
+];
+
+
+// BEAUTIFUL 
+const COLLECTION_COLORS_T3 = [
+  '#2e3d52',  // Deep shadow blue (dark sky corners)
+  '#5a7a9e',  // Cerulean mid-sky
+  '#4a7a4a',  // Muted sage (distant landscape)
+  '#b87d3e',  // Ochre gold (gilded drapery)
+  '#c97060',  // Venetian rose (flesh / warm drapery)
+  '#d9c4a0',  // Pale cream (cloud base)
+  '#f2ede4',  // Luminous near-white (zenith sky)
+];
+
+const COLLECTION_COLORS_T4 = [
+  '#f7f4ef',  // Luminous near-white zenith
+  '#dce8f0',  // Pale cloud blue
+  '#a8c8de',  // Soft cerulean
+  '#6a9bbf',  // Mid sky blue
+  '#3d6e9a',  // Strong cerulean
+  '#1e4470',  // Deep Tiepolo blue
+  '#0d1f3c',  // Midnight vault
+];
+
+
+const COLLECTION_COLORS_T5 = [
+  '#faf3e0',  // Blazing ivory light
+  '#f0d080',  // Vivid Naples yellow
+  '#e0a030',  // Rich ochre gold
+  '#c86030',  // Burnt sienna
+  '#a03820',  // Deep vermilion
+  '#6a2010',  // Dark Venetian red
+  '#2e0e08',  // Shadow umber
+];
+
+
+// BEAUTIFUL 
+const COLLECTION_COLORS_T6 = [
+  '#f2ede4',  // Luminous cloud white
+  '#e8c060',  // Vivid Naples yellow
+  '#d06040',  // Strong Venetian rose
+  '#7ab060',  // Punchy sage green
+  '#3a80b0',  // Bold cerulean
+  '#1e4060',  // Deep sky blue
+  '#1a1a2e',  // Dark shadow vault
+];
+
+const bandUniforms = COLLECTION_COLORS_T6.map(hex => uniform(color(hex)));
 
 function bandColor(i) {
   const idx = i % bandUniforms.length;
@@ -89,8 +154,25 @@ export const getMat3 = (g) => {
   
   // This needs to be scaled by the maxHeight.
   //const sampleOffset = uniform(0.01).mul(g.userData.maxHeight); // tune: world units below surface to sample
-  const sampleOffset = uniform(0.001).mul(positionLocal.y);
+  // but also by average height.
+  // min needs to be the min non-zero!
+  const minH = uniform(g.userData.minHeight);
+  const maxH = uniform(g.userData.maxHeight);
+  const avH = g.userData.averageHeight;
+  const scaleFactor = uniform(maxH/avH);
+  console.log("max",maxH, "minH",minH, "avg", avH);
+  //const sampleOffset = uniform(0.0001).mul(scaleFactor).div(positionLocal.y);
+  // Normalise this vertex's height within the full range (0..1)
+  // Then scale offset so tall peaks sample deeper into their bands
+  const heightRange   = maxH.sub(minH).add(float(0.001)); // avoid div/0
+  const normalizedY   = clamp(
+      positionLocal.y.sub(minH).div(heightRange),
+      float(0.0),
+      float(1.0)
+    );
 
+  // sampleOffset grows with height — tune the multiplier (try 0.3–0.8)
+  const sampleOffset = normalizedY.mul(avH).mul(float(0.5));
 
   // Band boundary attributes — cumulative log-scaled world Y per layer
   const b0  = attribute('band0');

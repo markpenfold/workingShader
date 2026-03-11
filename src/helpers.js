@@ -102,14 +102,18 @@ export function updatePlane12(geo, aggregatedEvents, curve_points = 64) {
   const heights = new Float32Array(vertexCount);
   let maxHeight = -Infinity;
   let minHeight = Infinity;
+  let runningTotal = 0;
+
 
   for (let i = 0; i < vertexCount; i++) {
     const h = smoothHeights[i] < 0.55 ? 0 : smoothHeights[i];
     heights[i] = h;
     if (h > maxHeight) maxHeight = h;
-    if (h < minHeight) minHeight = h;
+    if (h < minHeight && h>0) minHeight = h;
     positions[i * 3 + 1] = h;
+    runningTotal += h;
   }
+    let averageHeight = runningTotal/vertexCount;
 
   posAttr.needsUpdate = true;
   geo.computeVertexNormals();
@@ -149,7 +153,6 @@ export function updatePlane12(geo, aggregatedEvents, curve_points = 64) {
       if (smoothed[i] < 0) smoothed[i] = 0;
     }
     smoothedLayers.push(smoothed);
-    console.log('smoothed tl:', smoothed);
   }
 
   // ---- raw timeline attributes ----
@@ -186,6 +189,7 @@ export function updatePlane12(geo, aggregatedEvents, curve_points = 64) {
   geo.userData.numTimelines = numTimelines;
   geo.userData.maxHeight = maxHeight;
   geo.userData.minHeight = minHeight;
+  geo.userData.averageHeight = averageHeight;
   geo.userData.maxTimelines = MAX_TIMELINES;
 
   return geo;
