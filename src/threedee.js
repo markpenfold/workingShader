@@ -28,7 +28,49 @@ const COLLECTION_COLORS2 = [
   '#4b0782',  // Deep purple
 ];
 
-const bandUniforms = COLLECTION_COLORS.map(hex => uniform(color(hex)));
+const COLLECTION_COLORS_G = [
+  '#4a4a4a',  // Dark charcoal
+  '#5e5e5e',  // Mid-dark grey
+  '#747474',  // Mid grey
+  '#8e8e8e',  // Medium grey
+  '#a8a8a8',  // Light-mid grey
+  '#c4c4c4',  // Light grey
+  '#e2e2e2',  // Near white grey
+];
+
+const COLLECTION_COLORS_WG = [
+  '#4b4744',  // Dark warm grey
+  '#605c59',  // Warm charcoal
+  '#78736f',  // Mid warm grey
+  '#918c88',  // Greige mid
+  '#aba6a2',  // Warm light grey
+  '#c6c1bd',  // Pale greige
+  '#e3dfdc',  // Warm near-white
+];
+
+const COLLECTION_COLORS_RED = [
+  '#5c1a1a',  // Deep burgundy
+  '#7a2525',  // Dark red
+  '#9e3535',  // Mid red
+  '#be5555',  // Faded red
+  '#d47f7f',  // Dusty rose
+  '#e8aaaa',  // Pale pink-red
+  '#f7d8d8',  // Blush
+];
+
+
+const COLLECTION_COLORS_GREEN = [
+  '#1a3320',  // Deep forest
+  '#2a4f32',  // Dark green
+  '#3d6b46',  // Mid forest
+  '#5a8c62',  // Sage-green
+  '#80aa87',  // Muted sage
+  '#adc9b2',  // Pale sage
+  '#d6ead9',  // Mint whisper
+];
+
+
+const bandUniforms = COLLECTION_COLORS_WG.map(hex => uniform(color(hex)));
 
 function bandColor(i) {
   const idx = i % bandUniforms.length;
@@ -105,12 +147,17 @@ export const getMat3 = (g) => {
       colorOut = mix(colorOut, bandColor(i + 1), mask);
     }
 
-    
+    const heightVariation = mix(
+      vec3(0.3, 0.3, 0.3),
+      vec3(1.2, 1.2, 1.2),
+      clamp(positionLocal.y.mul(0.06), float(0.0), float(1.0)),
+    );
+    const colorWithHeight = colorOut.mul(heightVariation);
 
     // Height mask
     const heightMask = step(0.5, positionWorld.y);
 
-    return mix(baseColor, colorOut, heightMask);
+    return mix(baseColor, colorWithHeight, heightMask);
 
   })();
 
