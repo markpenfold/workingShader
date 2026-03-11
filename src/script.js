@@ -1,9 +1,11 @@
 import * as THREE from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { updatePlane10 } from './helpers.js'
+import {updatePlane12, updatePlane11Smooth } from './helpers.js'
 import { getMat } from './nodeMaterial2.js';
 import { dum_dum } from '../dd.js';
-
+import { ddx } from '../ddx.js';
+import { dFdx } from 'three/src/nodes/TSL.js';
+import { getMat3 } from './threedee.js';
 
 let camera, scene, renderer, controls;
 
@@ -15,12 +17,12 @@ const BOARD_SIZE = 200;
 
 
 // curve sampling
-const curve_points = 32;
+const curve_points = 256;
 // peak[0] is IGNORED!
-let peak = [1,5,1,1,1,1];
+let peak = [1,5,5,5,5,5];
 let peak2 = [1,5,5,1,1,1];
 
-let output = [[10, 1,1,1,1,5]];
+let output = [[0, 5,5,5,5,5]];
 
 for(let x=0; x<499; x++){
     output.push([0,0,0,0,0,0])
@@ -39,9 +41,12 @@ for(let x=0; x<518; x++){
 
 const planeGeo = new THREE.PlaneGeometry(BOARD_SIZE, BOARD_SIZE, curve_points-1, curve_points-1);
 planeGeo.rotateX(-Math.PI / 2); // make its normal point up +Y
-const g2 = updatePlane10(planeGeo, dum_dum, curve_points);
-const terrainMat = getMat(g2);
-const terrainMesh = new THREE.Mesh(g2, terrainMat);
+const g2 = updatePlane12(planeGeo,ddx, curve_points);
+console.log("G", g2);
+//const terrainMat = getMat(g2);
+let tMat = getMat3(g2, ddx);
+const terrainMesh = new THREE.Mesh(g2, tMat);
+
 
 init();
 
@@ -100,19 +105,27 @@ directionalLight2.shadow.normalBias = 0.05;
 directionalLight2.shadow.bias = 0.5;
 directionalLight2.lookAt(0,0,0);
 const helper2 = new THREE.DirectionalLightHelper( directionalLight2, 5 );
-scene.add(helper2)
+//scene.add(helper2)
 
+// Soft sky/ground hemisphere
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 2.0);
+hemiLight.position.set(0, 1, 0);
+//scene.add(hemiLight);
+
+// Flat ambient to fill shadows completely
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+scene.add(ambientLight);
 
 
 
 
 const helper = new THREE.DirectionalLightHelper( directionalLight, 5 );
-scene.add(helper)
+//scene.add(helper)
 const axis = new THREE.AxesHelper(100);
-scene.add(axis);
+//scene.add(axis);
 scene.add( directionalLight );
 
-const light = new THREE.HemisphereLight( 0xfffffb, 0xffc266, 2 );
+//const light = new THREE.HemisphereLight( 0xfffffb, 0xffc266, 2 );
 //scene.add( light );
 
   
